@@ -11,10 +11,14 @@ const filter = document.querySelector('#filter');
 // Input for typing in the task
 const taskInput = document.querySelector('#task');
 
-// Load all event listeners
+// [Load all event listeners]
 loadEventListeners();
 
 function loadEventListeners() {
+  // * DOM Load event: In order to have the UI show what is being persisted in our local storage, we need
+  // to make a new function to do so, but we also need an event to load for the function to be called
+  document.addEventListener('DOMContentLoaded', getTasks);
+
   // Add task event
   form.addEventListener('submit', addTask);
 
@@ -26,6 +30,46 @@ function loadEventListeners() {
 
   // Filter tasks event
   filter.addEventListener('keyup', filterTasks);
+}
+
+// [GET TASKS FROM LS - EVENT HANDLER] - Within this function, we reuse logic that was used for creating a
+// task item as well as checking to see if there is any data that is stored in our local storage to begin with:
+function getTasks() {
+  // First we check to see if there are any tasks inside our local storage:
+  let tasks;
+  if (localStorage.getItem('tasks') === null) {
+    tasks = [];
+  } else {
+    tasks = JSON.parse(localStorage.getItem('tasks'));
+  }
+  // Then, we use a forEach to loop through our exisiting data and create the task items into our UI:
+  // Create li element
+
+  tasks.forEach(function (task) {
+    const li = document.createElement('li');
+
+    // Add class | with Materialize, in order for your UL to look good, the UL should have a class of "collection"
+    // and the LI's should have a class of "collection-item"
+    li.className = 'collection-item';
+
+    // Create text node and append to li
+    li.appendChild(document.createTextNode(task));
+
+    // Create new link element
+    const link = document.createElement('a');
+
+    // Add class
+    link.className = 'delete-item secondary-content';
+
+    // Add 'icon' HTML
+    link.innerHTML = '<i class="fa fa-remove"></i>';
+
+    // Append the link to li
+    li.appendChild(link);
+
+    // Append li to the ul
+    taskList.appendChild(li);
+  });
 }
 
 // [ADD TASK - EVENT HANDLER]
@@ -61,7 +105,7 @@ function addTask(e) {
   taskList.appendChild(li);
 
   // Store in LS
-  storeTaskInLocalStorage();
+  storeTaskInLocalStorage(taskInput.value);
 
   // Clear the task input
   taskInput.value = '';
@@ -92,18 +136,44 @@ function storeTaskInLocalStorage(task) {
   localStorage.setItem('tasks', JSON.stringify(tasks));
 }
 
-// [REMOVE TASK - EVENT HANDLER]
+// [REMOVE TASK FROM UI - EVENT HANDLER]
 function removeTask(e) {
   // If the 'a' tag (e.target.parentElement) contains "delete-item" in its class list
   if (e.target.parentElement.classList.contains('delete-item')) {
     // Upon click, confirm if user is sure and remove li (e.taret.parentElement.parentElement)
     if (confirm('Are you sure?')) {
       e.target.parentElement.parentElement.remove();
+
+      // Remove from LS
+      removeTaskFromLocalStorage(e.target.parentElement.parentElement);
     }
   }
 }
 
-// [CLEAR TASKS - EVENT HANDLER]
+// [REMOVE TASK FROM LS - EVENT HANDLER] - In this event handler, it takes in the element that is passed in
+// from the event target from the REMOVE TASK UI. Then, we use the same if/else statement to
+// see if there is any data inside of our local storage so that we can set further parameters to specify
+// which pieces of data will be removed from the array. Within our forEach, we utilize the secondary parameter
+// of the "index" so that it can pinpoint which item to [.splice()] and remove from the array:
+function removeTaskFromLocalStorage(taskItem) {
+  let tasks;
+  if (localStorage.getItem('tasks') === null) {
+    tasks = [];
+  } else {
+    tasks = JSON.parse(localStorage.getItem('tasks'));
+  }
+
+  // Within our forEach loop, we check it see if the current iterated loop in the forEach matches
+  tasks.forEach(function (task, index) {
+    if (taskItem.textContent === task) {
+      tasks.splice(index, 1);
+    }
+  });
+
+  localStorage.setItem('tasks', JSON.stringify(tasks));
+}
+
+// [CLEAR TASKS from UI - EVENT HANDLER]
 function clearTasks() {
   // OPTION #1:
   // taskList.innerHTML = '';
@@ -111,10 +181,17 @@ function clearTasks() {
   // OPTION #2 | FASTER*:
   while (taskList.firstChild) {
     taskList.removeChild(taskList.firstChild);
-
-    // RESOURCE FOR TWO OPTIONS ABOVE:
-    // http://jsperf.com/innerhtml-vs-removechild
   }
+  // RESOURCE FOR TWO OPTIONS ABOVE:
+  // http://jsperf.com/innerhtml-vs-removechild
+
+  // Clear from LS
+  clearTasksFromLocalStorage();
+}
+
+// [CLEAR TASKS from LS]
+function clearTasksFromLocalStorage() {
+  localStorage.clear();
 }
 
 // [FILTER TASKS - EVENT HANDLER]
